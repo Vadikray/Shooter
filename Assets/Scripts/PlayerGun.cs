@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class PlayerGun : Gun
 {
+    [SerializeField] private int _damage = 1;
     [SerializeField] private Transform _bulletPoint;
     [SerializeField] private float _bulletSpeed;
     [SerializeField] private float _shootDelay;
@@ -19,7 +20,7 @@ public class PlayerGun : Gun
         
         _lastShootTime = Time.time;
         Instantiate(_bulletPrefab, position, _bulletPoint.rotation)
-            .Init(velocity);
+            .Init(velocity,_damage);
         shoot?.Invoke();
 
         info.pX = position.x; 

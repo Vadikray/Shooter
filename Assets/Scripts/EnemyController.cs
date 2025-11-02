@@ -5,9 +5,10 @@ using UnityEngine;
 
 public class EnemyController : MonoBehaviour
 {
+    // [SerializeField] private float _clampPing = 0.05f;
     [SerializeField] private EnemyCharacter _character;
     [SerializeField] private EnemyGun _gun;
-    private List<float> _receiveTimeInterval = new List<float> {0, 0, 0, 0, 0};
+    private List<float> _receiveTimeInterval = new List<float> {0f, 0f, 0f, 0f, 0f};
 
     private float AverageInterval
     {
@@ -23,20 +24,24 @@ public class EnemyController : MonoBehaviour
             return summ / receiveTimeIntervalCount;
         }
     }
+
     private float _lastReceiveTime = 0f;
     private Player _player;
 
-    public void Init(Player player)
+    public void Init(string key, Player player)
     {
+        _character.Init(key);
+        
         _player = player;
         _character.SetSpeed(player.speed);
+        _character.SetMaxHP(player.maxHP);
         player.OnChange += OnChange;
     }
 
     public void Shoot(in ShootInfo info)
     {
-        Vector3 position = new Vector3(info.pX, info.pY,info.pZ);
-        Vector3 velocity = new Vector3(info.dX, info.dY,info.dZ);
+        Vector3 position = new Vector3(info.pX, info.pY, info.pZ);
+        Vector3 velocity = new Vector3(info.dX, info.dY, info.dZ);
         _gun.Shoot(position, velocity);
     }
 
@@ -50,6 +55,7 @@ public class EnemyController : MonoBehaviour
     {
         float interval = Time.time - _lastReceiveTime;
         _lastReceiveTime = Time.time;
+        // if (interval > _clampPing) interval = _clampPing;
         _receiveTimeInterval.Add(interval);
         _receiveTimeInterval.RemoveAt(0);
     }
@@ -64,6 +70,13 @@ public class EnemyController : MonoBehaviour
         {
             switch (dataChange.Field)
             {
+                case "loss":
+                    MultiplayerManager.Instance._lossCounter.SetEnemyLoss((byte)dataChange.Value);
+                    break;
+                case "currentHP":
+                    if ((sbyte) dataChange.Value > (sbyte) dataChange.PreviousValue)
+                        _character.RestoreHP((sbyte)dataChange.Value);
+                    break;
                 case "pX":
                     position.x = (float) dataChange.Value;
                     break;
@@ -83,14 +96,14 @@ public class EnemyController : MonoBehaviour
                     velocity.z = (float) dataChange.Value;
                     break;
                 case "rX":
-                    _character.SetRotateX((float)dataChange.Value);
+                    _character.SetRotateX((float) dataChange.Value);
                     break;
                 case "rY":
-                    _character.SetRotateY((float)dataChange.Value);
+                    _character.SetRotateY((float) dataChange.Value);
                     break;
-                default:
-                    Debug.LogWarning("Не обрабатывается изменение поля " + dataChange.Field);
-                    break;
+                // default:
+                //     Debug.LogWarning("Не обрабатывается изменение поля " + dataChange.Field);
+                //     break;
             }
         }
 
