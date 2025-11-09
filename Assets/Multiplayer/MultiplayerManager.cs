@@ -2,10 +2,13 @@ using System.Collections.Generic;
 using Colyseus;
 using Unity.Mathematics;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class MultiplayerManager : ColyseusManager<MultiplayerManager>
 {
-    [field:SerializeField] public LossCounter _lossCounter { get; private set; }
+    [field: SerializeField] public Skins  _skins;
+    [field: SerializeField] public LossCounter _lossCounter { get; private set; }
+    [field: SerializeField] public SpawnPoints _spawnPoints { get; private set; }
     [SerializeField] private PlayerCharacter _player;
     [SerializeField] private EnemyController _enemy;
 
@@ -22,10 +25,18 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
 
     private async void Connect()
     {
+        _spawnPoints.GetPoint(Random.Range(0, _spawnPoints.length), out Vector3 spawnPosition, out Vector3 spawnRotation);
+
         Dictionary<string, object> data = new Dictionary<string, object>()
         {
+            {"skins", _skins.lendth},
+            {"points", _spawnPoints.length},
             {"speed", _player.speed},
-            {"hp", _player.maxHealth}
+            {"hp", _player.maxHealth},
+            {"pX", spawnPosition.x},
+            {"pY", spawnPosition.y},
+            {"pZ", spawnPosition.z},
+            {"rY", spawnRotation.y},
         };
         _room = await Instance.client.JoinOrCreate<State>("state_handler", data);
         _room.OnStateChange += OnChange;
@@ -62,10 +73,12 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
     private void CreatePlayer(Player player)
     {
         var position = new Vector3(player.pX, player.pY, player.pZ);
-        var playerCharacter = Instantiate(_player, position, quaternion.identity);
+        Quaternion rotation = Quaternion.Euler(0,player.rY,0);
+        var playerCharacter = Instantiate(_player, position, rotation);
         player.OnChange += playerCharacter.OnChange;
 
-        _room.OnMessage<string>("Restart", playerCharacter.GetComponent<Controller>().Restart);
+        _room.OnMessage<int>("Restart", playerCharacter.GetComponent<Controller>().Restart);
+        playerCharacter.GetComponent<SetSkin>().Set(_skins.GetMaterial(player.skin));
     }
 
 
@@ -74,6 +87,7 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
         var position = new Vector3(player.pX, player.pY, player.pZ);
         var enemy = Instantiate(_enemy, position, quaternion.identity);
         enemy.Init(key, player);
+        enemy.GetComponent<SetSkin>().Set(_skins.GetMaterial(player.skin));
         _enemies.Add(key, enemy);
     }
 
